@@ -1,7 +1,10 @@
 # Credentials and Secrets
 .env
+.env.example
 credentials.json
 token.json
+tokens/
+
 
 # Python cache and temporary files
 __pycache__/

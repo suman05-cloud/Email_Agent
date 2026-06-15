@@ -13,23 +13,62 @@ flow = InstalledAppFlow.from_client_secrets_file(
     SCOPES
 )
 
-# Open browser for login
+# Tokens directory settings
+TOKENS_DIR = "tokens"
+os.makedirs(TOKENS_DIR, exist_ok=True)
+
+# Find existing token accounts
+existing_accounts = []
+if os.path.exists(TOKENS_DIR):
+    existing_accounts = [f[:-5] for f in os.listdir(TOKENS_DIR) if f.endswith(".json")]
+
+selected_email = None
+
+if existing_accounts:
+    print("Available Gmail accounts:")
+    for i, email in enumerate(existing_accounts, 1):
+        print(f"[{i}] {email}")
+    print(f"[{len(existing_accounts) + 1}] Login with a new account")
+    
+    choice = input(f"Select an account to use (1-{len(existing_accounts) + 1}): ").strip()
+    try:
+        choice_idx = int(choice) - 1
+        if 0 <= choice_idx < len(existing_accounts):
+            selected_email = existing_accounts[choice_idx]
+    except ValueError:
+        pass
+
 creds = None
+token_path = None
 
-if os.path.exists("token.json"):
-    creds = Credentials.from_authorized_user_file("token.json",SCOPES)
+if selected_email:
+    token_path = os.path.join(TOKENS_DIR, f"{selected_email}.json")
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
+# Open browser for login if not authenticated
 if not creds or not creds.valid:
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(Request())
+        if token_path:
+            with open(token_path, "w") as token_file:
+                token_file.write(creds.to_json())
     else:
         flow = InstalledAppFlow.from_client_secrets_file(
             "credentials.json", SCOPES
         )
         creds = flow.run_local_server(port=0)
+        
+        # Build a temporary service to fetch user email address
+        temp_service = build("gmail", "v1", credentials=creds)
+        profile = temp_service.users().getProfile(userId="me").execute()
+        user_email = profile.get("emailAddress", "unknown_user").lower()
+        
+        token_path = os.path.join(TOKENS_DIR, f"{user_email}.json")
+        with open(token_path, "w") as token_file:
+            token_file.write(creds.to_json())
+        print(f"\nSuccessfully authenticated and saved token for: {user_email}\n")
 
-    with open("token.json", "w") as token_file:
-        token_file.write(creds.to_json())
 
 
 # Build Gmail service
