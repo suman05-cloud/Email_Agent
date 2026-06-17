@@ -1,8 +1,6 @@
-# Email Agent & LLM Chat Integration
+# AI Email Agent (Decoupled React + FastAPI)
 
-This project contains two components:
-1. **Gmail Integration (`app.py`)**: Fetches and displays the last 3 primary messages from your Gmail inbox using the Google Gmail API.
-2. **NVIDIA LLM Integration (`test.py`)**: A command-line chatbot interface powered by Qwen-3.5 via the NVIDIA API.
+This is a multi-user, production-ready AI Email Automation Agent. It features a React frontend that replicates a premium, ChatGPT-inspired conversational client, and a FastAPI python backend that manages Google OAuth, session profiles, and an autonomous ReAct loop powered by the NVIDIA Qwen-3.5 model.
 
 ---
 
@@ -10,78 +8,62 @@ This project contains two components:
 
 ```text
 Email_Agent/
-├── .env.example        # Template for environment variables
-├── .gitignore          # Git exclusion rules (keeps secrets out of Git)
-├── app.py              # Gmail API script
-├── requirements.txt    # Python dependencies
-└── test.py             # NVIDIA LLM chatbot script
+├── Front/                # React (Vite) Frontend Application
+│   ├── src/              # React components & global styles
+│   │   ├── App.jsx       # Main application layout, state & backend hooks
+│   │   ├── index.css     # CSS variable configuration & animations
+│   │   └── main.jsx
+│   ├── package.json      # Node dependencies
+│   └── vite.config.js
+├── backend.py            # FastAPI Python backend & OAuth router
+├── main.py               # Legacy CLI Gmail ReAct loop (reference)
+├── app.py                # Legacy CLI Gmail script (reference)
+├── requirements.txt      # Python dependencies
+├── credentials.json      # Google OAuth Client Credentials (keep local!)
+└── tokens/               # Folder where user Google OAuth tokens are stored
 ```
 
 ---
 
 ## Setup Instructions
 
-### 1. Clone the Repository
-```bash
-git clone <your-repository-url>
-cd Email_Agent
-```
+### 1. Prerequisite credentials
 
-### 2. Set Up a Virtual Environment (Optional but Recommended)
-```bash
-python -m venv venv
-# On Windows
-venv\Scripts\activate
-# On macOS/Linux
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure Environment Variables & Credentials
-
-#### NVIDIA API Key (For `test.py`)
-1. Duplicate `.env.example` and rename it to `.env`:
-   ```bash
-   copy .env.example .env
-   ```
-2. Open `.env` and replace `your_nvidia_api_key_here` with your actual NVIDIA API key:
+1. **NVIDIA API Key**: Open `.env` and configure your API key:
    ```env
    NVIDIA_API_KEY=nvapi-...
    ```
-
-#### Google Gmail Credentials (For `app.py`)
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a project, enable the **Gmail API**, and configure the **OAuth consent screen** (Internal or External with test users).
-3. Create **OAuth 2.0 Client IDs** credential and download the credentials JSON file.
-4. Save the downloaded JSON file in the root of this repository as `credentials.json`.
-5. The first time you run `app.py`, a browser window will open asking you to authenticate. Once completed, a `token.json` file will automatically be created to store your session token.
+2. **Google Credentials**: Download the **OAuth 2.0 Client credentials JSON** from the Google Cloud Console. Name this file `credentials.json` and place it in the root directory.
+   - *OAuth Redirect URI setting in Google Cloud Console*: Under Authorized Redirect URIs, add: `http://localhost:8000/api/auth/callback`.
 
 ---
 
 ## How to Run
 
-### Run NVIDIA LLM Chat
-```bash
-python test.py
-```
+For development, you run both the backend server and frontend development server simultaneously.
 
-### Run Gmail Agent
+### 1. Start the FastAPI Backend
 ```bash
-python app.py
+# In the root directory:
+uvicorn backend:app --reload
 ```
+The backend will start running at `http://localhost:8000`.
+
+### 2. Start the React Frontend
+```bash
+# Open a new terminal tab, navigate to Front folder:
+cd Front
+npm install       # (If not already installed)
+npm run dev
+```
+The frontend will start running at `http://localhost:5173`. Open this URL in your browser.
 
 ---
 
-## Security Notes
+## Authentication Flow (Multi-User Support)
 
-> [!IMPORTANT]
-> The following sensitive files are excluded from git tracking via `.gitignore` to prevent secret leaks:
-> - `.env` (contains API keys)
-> - `credentials.json` (contains Google OAuth client ID/secret)
-> - `token.json` (contains user authentication sessions)
->
-> Never commit or upload these files to GitHub or any public code hosting platform.
+1. When you load the frontend, click **Gmail Integration** in the bottom-left sidebar.
+2. Click **Connect New Gmail Account**.
+3. You will be redirected to the Google login page. Select the account you want to connect and grant the necessary permissions.
+4. Once completed, Google will redirect you back to the FastAPI backend, which registers your secure refresh token under `tokens/{email}.json`, and redirects you back to the frontend dashboard.
+5. You can now select this profile and converse with the email agent!
